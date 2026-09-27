@@ -1,0 +1,13 @@
+# Copy to wg0.conf (gitignored) and fill in the values from your server's
+# peer script. Only wg0.conf is loaded by the app.
+[Interface]
+PrivateKey = <client-private-key>
+Address = 10.8.0.2/32
+DNS = 1.1.1.1
+
+[Peer]
+PublicKey = <server-public-key>
+PresharedKey = <preshared-key>
+AllowedIPs = 0.0.0.0/0, ::/0
+Endpoint = <server-ip>:51820
+PersistentKeepalive = 25

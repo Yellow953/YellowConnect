@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import 'app/app.dart';
+import 'app/dependencies.dart';
 
-void main() {
-  runApp(const YellowConnectApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final deps = await AppDependencies.create();
+  runApp(YellowConnectApp(deps: deps));
 }
