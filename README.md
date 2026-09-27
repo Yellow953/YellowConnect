@@ -1,17 +1,27 @@
-# yellow_connect
+# Yellow Connect
 
-A new Flutter project.
+Cross-platform (Android + iOS) network-utilities app built in Flutter:
 
-## Getting Started
+- **VPN** — WireGuard client connecting to a self-hosted server
+- **Speed Test** — download/upload, Wi-Fi vs. mobile
+- **IP Checker** — current public IP
 
-This project is a starting point for a Flutter application.
+See [CLAUDE.md](CLAUDE.md) for architecture, stack, and build plan.
 
-A few resources to get you started if this is your first Flutter project:
+## Project layout
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```
+lib/
+  main.dart            entry point
+  app/                 MaterialApp, theme, top-level wiring
+  core/                shared utilities
+  features/<name>/     one folder per tool, each with model/ presenter/ view/
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Development
+
+```sh
+flutter pub get
+flutter analyze
+flutter run
+```

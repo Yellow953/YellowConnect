@@ -1,4 +1,4 @@
-package com.example.yellow_connect
+package com.yellowtech.yellowconnect
 
 import io.flutter.embedding.android.FlutterActivity
 
