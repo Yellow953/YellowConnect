@@ -52,33 +52,19 @@ class SpeedTestView extends StatelessWidget {
             const Spacer(),
             SpeedGauge(
               mbps: shown,
-              child: showStart
-                  ? _StartButton(onPressed: presenter.start)
-                  : Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _stateLabel(state),
-                          style: AppText.style(
-                            16,
-                            weight: FontWeight.w600,
-                            color: AppColors.text2,
-                          ),
-                        ),
-                        Text(
-                          formatMbps(shown),
-                          style: AppText.figure(76, weight: FontWeight.w800),
-                        ),
-                        Text(
-                          'Mbps',
-                          style: AppText.style(
-                            17,
-                            weight: FontWeight.w600,
-                            color: AppColors.text2,
-                          ),
-                        ),
-                      ],
-                    ),
+              showNeedle: !showStart,
+              sweep: state == SpeedTestState.selectingServer,
+              center: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (child, animation) => ScaleTransition(
+                  scale: animation,
+                  child: FadeTransition(opacity: animation, child: child),
+                ),
+                child: showStart
+                    ? _StartButton(onPressed: presenter.start)
+                    : const SizedBox.shrink(),
+              ),
+              readout: showStart ? null : _Readout(state: state, mbps: shown),
             ),
             if (presenter.error case final error?)
               Text(
@@ -155,8 +141,61 @@ class SpeedTestView extends StatelessWidget {
       },
     );
   }
+}
 
-  static String _stateLabel(SpeedTestState state) => switch (state) {
+/// Digital readout under the needle: current phase, speed and unit.
+class _Readout extends StatelessWidget {
+  const _Readout({required this.state, required this.mbps});
+
+  final SpeedTestState state;
+  final double mbps;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = switch (state) {
+      SpeedTestState.testingDownload ||
+      SpeedTestState.done => Icons.arrow_downward_rounded,
+      SpeedTestState.testingUpload => Icons.arrow_upward_rounded,
+      _ => null,
+    };
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          formatMbps(mbps),
+          style: AppText.figure(54, weight: FontWeight.w800),
+        ),
+        Text(
+          'Mbps',
+          style: AppText.style(
+            15,
+            weight: FontWeight.w600,
+            color: AppColors.text2,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 16, color: AppColors.text2),
+              const SizedBox(width: 3),
+            ],
+            Text(
+              _label(state),
+              style: AppText.style(
+                14,
+                weight: FontWeight.w600,
+                color: AppColors.text2,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  static String _label(SpeedTestState state) => switch (state) {
     SpeedTestState.idle => 'Ready',
     SpeedTestState.selectingServer => 'Getting ready',
     SpeedTestState.testingDownload => 'Download',

@@ -20,7 +20,8 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
-  AppTab _tab = AppTab.vpn;
+  // A widget tap on cold start picks the first tab.
+  late AppTab _tab = widget.deps.launchActions.takeRequestedTab() ?? AppTab.vpn;
 
   static const _items = {
     AppTab.vpn: GlassNavItem(
@@ -44,6 +45,24 @@ class _AppShellState extends State<AppShell> {
       'Settings',
     ),
   };
+
+  @override
+  void initState() {
+    super.initState();
+    widget.deps.launchActions.addListener(_onLaunchAction);
+  }
+
+  @override
+  void dispose() {
+    widget.deps.launchActions.removeListener(_onLaunchAction);
+    super.dispose();
+  }
+
+  void _onLaunchAction() {
+    if (widget.deps.launchActions.takeRequestedTab() case final tab?) {
+      _select(tab);
+    }
+  }
 
   void _select(AppTab tab) => setState(() => _tab = tab);
 

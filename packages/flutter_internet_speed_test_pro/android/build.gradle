@@ -25,7 +25,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdkVersion 33
+    compileSdkVersion 36
     namespace 'com.redx1t.plugin.fist.flutter_internet_speed_test_pro'
 
     compileOptions {

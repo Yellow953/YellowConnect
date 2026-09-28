@@ -25,6 +25,9 @@ class ConnectionPresenter extends ChangeNotifier {
   VpnConfig? _config;
   String? get serverHost => _config?.serverHost;
 
+  /// This device's address inside the tunnel, without the prefix length.
+  String? get tunnelIp => _config?.tunnelAddress?.split('/').first;
+
   Duration _elapsed = Duration.zero;
   Duration get elapsed => _elapsed;
 

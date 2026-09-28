@@ -22,6 +22,7 @@ class ConnectionView extends StatelessWidget {
       builder: (context, _) {
         final status = presenter.status;
         final host = presenter.serverHost;
+        final failure = presenter.failure;
 
         return AppPage(
           title: 'Yellow Connect',
@@ -49,41 +50,59 @@ class ConnectionView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 36),
-            Text(
-              _headline(status),
-              textAlign: TextAlign.center,
-              style: AppText.style(
-                30,
-                weight: FontWeight.w800,
-                letterSpacing: -0.6,
+            _Swap(
+              child: Text(
+                _headline(status),
+                key: ValueKey(status),
+                textAlign: TextAlign.center,
+                style: AppText.style(
+                  30,
+                  weight: FontWeight.w800,
+                  letterSpacing: -0.6,
+                ),
               ),
             ),
             const SizedBox(height: 6),
-            presenter.isConnected
-                ? Text(
-                    formatDuration(presenter.elapsed),
-                    textAlign: TextAlign.center,
-                    style: AppText.figure(
-                      20,
-                      weight: FontWeight.w600,
-                      color: AppColors.text2,
+            _Swap(
+              child: presenter.isConnected
+                  ? Text(
+                      formatDuration(presenter.elapsed),
+                      key: const ValueKey('timer'),
+                      textAlign: TextAlign.center,
+                      style: AppText.figure(
+                        20,
+                        weight: FontWeight.w600,
+                        color: AppColors.text2,
+                      ),
+                    )
+                  : Text(
+                      _hint(status, host),
+                      key: ValueKey(status),
+                      textAlign: TextAlign.center,
+                      style: AppText.style(16, color: AppColors.text2),
                     ),
-                  )
-                : Text(
-                    _hint(status, host),
-                    textAlign: TextAlign.center,
-                    style: AppText.style(16, color: AppColors.text2),
-                  ),
-            if (presenter.failure case final failure?)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 14, 12, 0),
-                child: Text(
-                  failure.message,
-                  textAlign: TextAlign.center,
-                  style: AppText.style(14, color: AppColors.red, height: 1.35),
-                ),
-              ),
-            const Spacer(flex: 2),
+            ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+              child: failure != null
+                  ? Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 14, 12, 0),
+                      child: Text(
+                        failure.message,
+                        textAlign: TextAlign.center,
+                        style: AppText.style(
+                          14,
+                          color: AppColors.red,
+                          height: 1.35,
+                        ),
+                      ),
+                    )
+                  : const SizedBox(width: double.infinity),
+            ),
+            const Spacer(),
+            const SizedBox(height: 24),
+            _ServerCard(presenter: presenter),
           ],
         );
       },
@@ -129,6 +148,72 @@ class _Glow extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Cross-fades and slides text when its key changes.
+class _Swap extends StatelessWidget {
+  const _Swap({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 280),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: SlideTransition(
+          position: Tween(
+            begin: const Offset(0, 0.25),
+            end: Offset.zero,
+          ).animate(animation),
+          child: child,
+        ),
+      ),
+      child: child,
+    );
+  }
+}
+
+/// The server in use; grows to show the tunnel address once connected.
+class _ServerCard extends StatelessWidget {
+  const _ServerCard({required this.presenter});
+
+  final ConnectionPresenter presenter;
+
+  @override
+  Widget build(BuildContext context) {
+    final connected = presenter.isConnected;
+    final host = presenter.serverHost;
+    final tunnelIp = presenter.tunnelIp;
+
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+      alignment: Alignment.topCenter,
+      child: DetailList(
+        rows: [
+          DetailRow(
+            icon: Icons.dns_rounded,
+            tone: connected ? IconTileTone.yellow : IconTileTone.gray,
+            label: 'Server',
+            caption: 'WireGuard',
+            value: host ?? 'Not set up',
+          ),
+          if (connected && tunnelIp != null)
+            DetailRow(
+              icon: Icons.lock_rounded,
+              tone: IconTileTone.yellow,
+              label: 'Tunnel IP',
+              caption: 'Your address inside the VPN',
+              value: tunnelIp,
+            ),
+        ],
       ),
     );
   }
