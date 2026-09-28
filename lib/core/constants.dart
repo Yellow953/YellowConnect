@@ -11,6 +11,9 @@ abstract final class AppConstants {
   /// Bundled WireGuard client config (gitignored; see wg0.conf.example).
   static const vpnConfigAsset = 'assets/vpn/wg0.conf';
 
+  /// Method channel for deep links from the home screen widgets.
+  static const launchActionChannel = 'yellowconnect/launch_action';
+
   /// IP plus location and ISP. Free, no key.
   static final ipDetailsUrl = Uri.parse('https://ipwho.is/');
 

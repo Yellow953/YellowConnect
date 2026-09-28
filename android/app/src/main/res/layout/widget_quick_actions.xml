@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/WidgetRoot">
+
+    <LinearLayout
+        android:id="@+id/widget_connect"
+        style="@style/WidgetTile"
+        android:background="@drawable/widget_tile_dark">
+
+        <ImageView
+            style="@style/WidgetChip"
+            android:background="@drawable/widget_chip_dark"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_widget_power"
+            android:tint="@android:color/white" />
+
+        <TextView
+            style="@style/WidgetLabel"
+            android:text="@string/widget_connect_label"
+            android:textColor="@android:color/white" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/widget_speed_test"
+        style="@style/WidgetTile"
+        android:background="@drawable/widget_tile_light">
+
+        <ImageView
+            style="@style/WidgetChip"
+            android:background="@drawable/widget_chip_light"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_widget_speed" />
+
+        <TextView
+            style="@style/WidgetLabel"
+            android:text="@string/widget_speed_test_label"
+            android:textColor="@color/brand_black" />
+    </LinearLayout>
+</LinearLayout>
