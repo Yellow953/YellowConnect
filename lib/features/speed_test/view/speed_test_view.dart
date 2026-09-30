@@ -22,6 +22,8 @@ class SpeedTestView extends StatelessWidget {
   final SpeedTestPresenter presenter;
   final NetworkPresenter network;
 
+  static const _actionsHeight = 56.0;
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -29,11 +31,14 @@ class SpeedTestView extends StatelessWidget {
       builder: (context, _) {
         final state = presenter.state;
         final running = presenter.isRunning;
-        final last = presenter.lastResult;
+        // The last finished result only stands in when no test is on
+        // screen (e.g. after Stop), never mixed into a new run's figures.
+        final last = state == SpeedTestState.idle ? presenter.lastResult : null;
         final download = presenter.downloadMbps ?? last?.downloadMbps;
         final upload = presenter.uploadMbps ?? last?.uploadMbps;
         final shown = running ? presenter.currentMbps : (download ?? 0);
-        final showStart = !running && download == null;
+        final showStart =
+            !running && download == null && state != SpeedTestState.error;
 
         return AppPage(
           title: 'Speed test',
@@ -64,14 +69,10 @@ class SpeedTestView extends StatelessWidget {
                     ? _StartButton(onPressed: presenter.start)
                     : const SizedBox.shrink(),
               ),
-              readout: showStart ? null : _Readout(state: state, mbps: shown),
+              readout: showStart
+                  ? null
+                  : _Readout(state: state, mbps: shown, error: presenter.error),
             ),
-            if (presenter.error case final error?)
-              Text(
-                error,
-                textAlign: TextAlign.center,
-                style: AppText.style(14, color: AppColors.red),
-              ),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -96,46 +97,31 @@ class SpeedTestView extends StatelessWidget {
             ),
             const Spacer(),
             const SizedBox(height: 20),
-            if (running)
-              FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.black,
-                  foregroundColor: AppColors.white,
-                ),
-                onPressed: presenter.cancel,
-                child: const Text('Stop test'),
-              )
-            else if (!showStart)
-              Row(
-                children: [
-                  Expanded(
-                    child: _ShadowedButton(
-                      shadow: Colors.black.withValues(alpha: 0.06),
-                      child: FilledButton.icon(
+            // Fixed height whatever the state, so starting or finishing a
+            // test never shifts the gauge.
+            SizedBox(
+              height: _actionsHeight,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: running
+                    ? FilledButton(
+                        key: const ValueKey('stop'),
                         style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.card,
-                          foregroundColor: AppColors.text,
+                          backgroundColor: AppColors.black,
+                          foregroundColor: AppColors.white,
                         ),
-                        onPressed: presenter.clear,
-                        icon: const Icon(Icons.close_rounded, size: 20),
-                        label: const Text('Clear'),
+                        onPressed: presenter.cancel,
+                        child: const Text('Stop test'),
+                      )
+                    : showStart
+                    ? const SizedBox.shrink()
+                    : _DoneActions(
+                        key: const ValueKey('done'),
+                        onClear: presenter.clear,
+                        onRestart: presenter.start,
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: _ShadowedButton(
-                      shadow: AppColors.yellow.withValues(alpha: 0.4),
-                      child: FilledButton.icon(
-                        onPressed: presenter.start,
-                        icon: const Icon(Icons.refresh_rounded, size: 22),
-                        label: const Text('Test again'),
-                      ),
-                    ),
-                  ),
-                ],
               ),
+            ),
           ],
         );
       },
@@ -143,15 +129,93 @@ class SpeedTestView extends StatelessWidget {
   }
 }
 
-/// Digital readout under the needle: current phase, speed and unit.
-class _Readout extends StatelessWidget {
-  const _Readout({required this.state, required this.mbps});
+class _DoneActions extends StatelessWidget {
+  const _DoneActions({
+    super.key,
+    required this.onClear,
+    required this.onRestart,
+  });
 
-  final SpeedTestState state;
-  final double mbps;
+  final VoidCallback onClear;
+  final VoidCallback onRestart;
 
   @override
   Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _ShadowedButton(
+            shadow: Colors.black.withValues(alpha: 0.06),
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.card,
+                foregroundColor: AppColors.text,
+              ),
+              onPressed: onClear,
+              icon: const Icon(Icons.close_rounded, size: 20),
+              label: const Text('Clear'),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 2,
+          child: _ShadowedButton(
+            shadow: AppColors.yellow.withValues(alpha: 0.4),
+            child: FilledButton.icon(
+              onPressed: onRestart,
+              icon: const Icon(Icons.refresh_rounded, size: 22),
+              label: const Text('Test again'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Digital readout under the needle: current phase, speed and unit, or what
+/// went wrong.
+class _Readout extends StatelessWidget {
+  const _Readout({required this.state, required this.mbps, this.error});
+
+  final SpeedTestState state;
+  final double mbps;
+  final String? error;
+
+  @override
+  Widget build(BuildContext context) {
+    if (error case final error? when state == SpeedTestState.error) {
+      // Narrow enough to stay clear of the dial's end labels and track.
+      return Center(
+        child: SizedBox(
+          width: 180,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.wifi_off_rounded,
+                size: 28,
+                color: AppColors.red,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _label(state),
+                style: AppText.style(17, weight: FontWeight.w700),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                error,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.style(13, color: AppColors.text2),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     final icon = switch (state) {
       SpeedTestState.testingDownload ||
       SpeedTestState.done => Icons.arrow_downward_rounded,

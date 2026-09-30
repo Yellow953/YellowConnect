@@ -1,24 +1,28 @@
 import 'dart:async';
+import 'dart:isolate';
 
-import 'package:flutter_internet_speed_test_pro/flutter_internet_speed_test_pro.dart';
-
+import '../../../core/result.dart';
+import '../../ip_checker/model/ip_repository.dart';
+import 'speed_test_engine.dart';
 import 'speed_test_event.dart';
 
-/// Wraps flutter_internet_speed_test_pro's callback API as a stream.
+/// Runs [SpeedTestEngine] in a background isolate and streams its events.
+/// The ISP lookup runs alongside so it doesn't add to the test's length.
 class SpeedTestRepository {
-  SpeedTestRepository([FlutterInternetSpeedTest? speedTest])
-    : _speedTest = speedTest ?? FlutterInternetSpeedTest();
+  SpeedTestRepository(this._ipRepository);
 
-  final FlutterInternetSpeedTest _speedTest;
+  final IpRepository _ipRepository;
   StreamController<SpeedTestEvent>? _controller;
-
-  bool get isRunning => _speedTest.isTestInProgress();
+  ReceivePort? _port;
+  Isolate? _isolate;
 
   /// Runs download then upload. The stream closes after a terminal event
   /// ([SpeedTestCompleted], [SpeedTestFailed] or [SpeedTestCancelled]).
   Stream<SpeedTestEvent> run() {
     _controller?.close();
+    _stop();
     final controller = _controller = StreamController<SpeedTestEvent>();
+    final port = _port = ReceivePort();
 
     void emit(SpeedTestEvent event) {
       if (controller.isClosed) return;
@@ -26,36 +30,66 @@ class SpeedTestRepository {
       if (event is SpeedTestCompleted ||
           event is SpeedTestFailed ||
           event is SpeedTestCancelled) {
+        if (_controller == controller) _stop();
+        port.close();
         controller.close();
       }
     }
 
-    _speedTest.startTesting(
-      onDefaultServerSelectionInProgress: () =>
-          emit(const SpeedTestSelectingServer()),
-      onDefaultServerSelectionDone: (client) =>
-          emit(SpeedTestServerSelected(ip: client?.ip, isp: client?.isp)),
-      onProgress: (percent, data) =>
-          emit(SpeedTestProgress(_phase(data), percent, _toMbps(data))),
-      onDownloadComplete: (data) =>
-          emit(SpeedTestPhaseDone(SpeedTestPhase.download, _toMbps(data))),
-      onUploadComplete: (data) =>
-          emit(SpeedTestPhaseDone(SpeedTestPhase.upload, _toMbps(data))),
-      onCompleted: (download, upload) =>
-          emit(SpeedTestCompleted(_toMbps(download), _toMbps(upload))),
-      onError: (message, _) => emit(SpeedTestFailed(message)),
-      onCancel: () => emit(const SpeedTestCancelled()),
+    // Anything but an event (an uncaught error, or the exit notice before a
+    // result) means the isolate died.
+    port.listen(
+      (message) => emit(
+        message is SpeedTestEvent
+            ? message
+            : SpeedTestFailed('Test isolate ended: $message'),
+      ),
+    );
+
+    emit(const SpeedTestSelectingServer());
+    Isolate.spawn(
+      _runInIsolate,
+      port.sendPort,
+      onError: port.sendPort,
+      onExit: port.sendPort,
+      debugName: 'speed_test',
+    ).then((isolate) {
+      // Cancelled or restarted before the isolate came up.
+      if (_port != port) return isolate.kill(priority: Isolate.immediate);
+      _isolate = isolate;
+    }, onError: (Object e) => emit(SpeedTestFailed('$e')));
+
+    unawaited(
+      _ipRepository.fetchPublicIp().then((result) {
+        if (result case Ok(:final value)) {
+          emit(SpeedTestServerSelected(ip: value.ip, isp: value.isp));
+        }
+      }),
     );
 
     return controller.stream;
   }
 
-  Future<void> cancel() => _speedTest.cancelTest();
+  Future<void> cancel() async {
+    final controller = _controller;
+    if (controller == null || controller.isClosed) return;
+    _stop();
+    controller
+      ..add(const SpeedTestCancelled())
+      ..close();
+  }
 
-  static SpeedTestPhase _phase(TestResult r) => r.type == TestType.download
-      ? SpeedTestPhase.download
-      : SpeedTestPhase.upload;
+  /// Kills the running test, if any. Its sockets close with the isolate.
+  void _stop() {
+    _isolate?.kill(priority: Isolate.immediate);
+    _isolate = null;
+    _port?.close();
+    _port = null;
+    _controller = null;
+  }
 
-  static double _toMbps(TestResult r) =>
-      r.unit == SpeedUnit.kbps ? r.transferRate / 1000 : r.transferRate;
+  static Future<void> _runInIsolate(SendPort out) async {
+    final result = await SpeedTestEngine.run(out.send);
+    Isolate.exit(out, result);
+  }
 }

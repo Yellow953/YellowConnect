@@ -41,9 +41,10 @@ class AppDependencies {
     final vpnRepository = VpnRepository();
     final settingsRepository = SettingsRepository(PreferencesService());
     final networkInfo = NetworkInfoService();
+    final ipRepository = IpRepository();
     final connection = ConnectionPresenter(vpnRepository);
     final speedTest = SpeedTestPresenter(
-      SpeedTestRepository(),
+      SpeedTestRepository(ipRepository),
       SpeedHistoryRepository(),
       networkInfo,
     );
@@ -52,7 +53,7 @@ class AppDependencies {
     final deps = AppDependencies._(
       network: NetworkPresenter(networkInfo),
       connection: connection,
-      ipChecker: IpCheckerPresenter(IpRepository(), vpnRepository.statusStream),
+      ipChecker: IpCheckerPresenter(ipRepository, vpnRepository.statusStream),
       speedTest: speedTest,
       settings: SettingsPresenter(settingsRepository),
       onboarding: onboarding,

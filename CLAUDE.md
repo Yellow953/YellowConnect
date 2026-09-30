@@ -53,9 +53,9 @@ Budget for MVP: **$0-10/month total** for one server.
 | VPN daemon | WireGuard (kernel module, via `wg-quick`) |
 | Config/key management | Simple shell scripts or a lightweight admin panel (e.g. `wg-easy`) to generate per-device keys and configs |
 | Hosting | Oracle Cloud Always Free VM (ARM), no cost — fall back to a paid VPS (Contabo, Cloudzy, 1VPS) if signup/availability is an issue |
-| Speed test | `flutter_internet_speed_test_pro` package — free, MIT-licensed, uses Fast.com (Netflix) by default with Ookla as an alternative; no server-side hosting needed |
+| Speed test | Own pure-Dart engine (`lib/features/speed_test/model/speed_test_engine.dart`) against Cloudflare's free speed endpoints (`speed.cloudflare.com/__down` / `__up`), run in a background isolate; 8s max per phase with a per-phase data budget; no server-side hosting needed |
 | IP checker | Public API call to api.ipify.org (or similar) — free, no API key required |
-| Network type detection | `connectivity_plus` package (already bundled as a dependency of `flutter_internet_speed_test_pro`), to label results Wi-Fi vs. mobile |
+| Network type detection | `connectivity_plus` package, to label results Wi-Fi vs. mobile |
 
 ## Technical Guidelines & Architecture
 
@@ -100,7 +100,7 @@ Out of scope for MVP: multi-region switching, kill switch, split tunneling, acco
 2. **Flutter project scaffold** — new Flutter app, add `wireguard_flutter`, set up Android manifest permissions and the iOS Network Extension target in Xcode.
 3. **Core connect flow** — wire up connect/disconnect using a test peer config, surface connection state in the UI.
 4. **UI polish** — status screen, settings screen, onboarding/permission flow.
-5. **Speed test & IP checker tools** — build the home/dashboard screen, then wire up the speed test (`flutter_internet_speed_test_pro`, no server needed) and IP checker (ipify API), each as its own Model-Presenter-View per the architecture above.
+5. **Speed test & IP checker tools** — build the home/dashboard screen, then wire up the speed test (Cloudflare endpoints, no server needed) and IP checker (ipify API), each as its own Model-Presenter-View per the architecture above.
 6. **Config delivery** — decide how the app gets its WireGuard config (bundled for MVP vs. fetched from a small backend endpoint later).
 7. **Test on real devices** — both platforms, including cellular data (not just wifi) to confirm the tunnel actually routes traffic.
 8. **Package for distribution** — Android APK/AAB; iOS requires the paid Apple Developer account for TestFlight/App Store.

@@ -63,7 +63,7 @@ class SpeedTestPresenter extends ChangeNotifier {
   List<SpeedTestResult> _history = [];
   List<SpeedTestResult> get history => List.unmodifiable(_history);
 
-  /// Latest finished result, kept on screen while a new test runs, until
+  /// Latest finished result, shown again if a new test is stopped, until
   /// [clear] is called.
   SpeedTestResult? _lastResult;
   SpeedTestResult? get lastResult => _lastResult;
@@ -82,11 +82,10 @@ class SpeedTestPresenter extends ChangeNotifier {
     _state = SpeedTestState.selectingServer;
     notifyListeners();
 
-    _networkType = await _networkInfo.currentType();
-    notifyListeners();
-
     await _sub?.cancel();
     _sub = _repository.run().listen(_onEvent);
+    // Only needed for the saved result, well before the test ends.
+    _networkType = await _networkInfo.currentType();
   }
 
   Future<void> cancel() async {
@@ -147,7 +146,7 @@ class SpeedTestPresenter extends ChangeNotifier {
         _state = SpeedTestState.done;
       case SpeedTestFailed(:final message):
         debugPrint('Speed test failed: $message');
-        _error = 'The test didn\'t finish. Check your internet and try again.';
+        _error = 'Check your connection and try again.';
         _state = SpeedTestState.error;
       case SpeedTestCancelled():
         _reset();
@@ -169,6 +168,7 @@ class SpeedTestPresenter extends ChangeNotifier {
   @override
   void dispose() {
     _sub?.cancel();
+    _repository.cancel();
     super.dispose();
   }
 }
