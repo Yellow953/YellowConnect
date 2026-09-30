@@ -20,6 +20,7 @@ import android.os.Build
 import android.util.Log
 import com.beust.klaxon.Klaxon
 import com.wireguard.android.backend.*
+import com.wireguard.config.BadConfigException
 import com.wireguard.crypto.Key
 import com.wireguard.crypto.KeyPair
 import io.flutter.plugin.common.EventChannel
@@ -228,16 +229,30 @@ class WireguardFlutterPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         }
     }
 
+    // Runs on the main thread: checkPermission may start the system dialog.
     private fun connect(wgQuickConfig: String, result: Result) {
+        if (!havePermission) {
+            checkPermission()
+            if (!havePermission) {
+                result.error("Permissions are not given", null, null)
+                return
+            }
+        }
         scope.launch(Dispatchers.IO) {
             try {
-                if (!havePermission) {
-                    checkPermission()
-                    throw Exception("Permissions are not given")
-                }
                 updateStage("prepare")
                 val inputStream = ByteArrayInputStream(wgQuickConfig.toByteArray())
-                config = com.wireguard.config.Config.parse(inputStream)
+                config = try {
+                    com.wireguard.config.Config.parse(inputStream)
+                } catch (e: BadConfigException) {
+                    // The exception's text and cause can hold the offending
+                    // value, which may be a private key. Report only where.
+                    val detail = "Bad config: ${e.section} ${e.location} ${e.reason}"
+                    Log.e(TAG, "Connect - $detail")
+                    updateStage("disconnected")
+                    flutterError(result, detail)
+                    return@launch
+                }
                 updateStage("connecting")
                 futureBackend.await().setState(
                     tunnel(tunnelName) { state ->
@@ -259,16 +274,16 @@ class WireguardFlutterPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         }
     }
 
+    // Runs on the main thread: checkPermission may start the system dialog,
+    // and results must be sent from the platform thread.
     private fun setupTunnel(localizedDescription: String, result: Result) {
-        scope.launch(Dispatchers.IO) {
-            if (Tunnel.isNameInvalid(localizedDescription)) {
-                flutterError(result, "Invalid Name")
-                return@launch
-            }
-            tunnelName = localizedDescription
-            checkPermission()
-            result.success(null)
+        if (Tunnel.isNameInvalid(localizedDescription)) {
+            result.error("Invalid Name", null, null)
+            return
         }
+        tunnelName = localizedDescription
+        checkPermission()
+        result.success(null)
     }
 
     private fun checkPermission() {

@@ -41,10 +41,14 @@ class ConnectionView extends StatelessWidget {
                     bottom: -120,
                     child: _Glow(on: status.isLit),
                   ),
-                  PowerButton(
-                    size: 290,
-                    status: status,
-                    onPressed: presenter.isBusy ? null : presenter.toggle,
+                  // The rings animate continuously while connected; keep
+                  // those repaints from spreading to the rest of the page.
+                  RepaintBoundary(
+                    child: PowerButton(
+                      size: 290,
+                      status: status,
+                      onPressed: presenter.isBusy ? null : presenter.toggle,
+                    ),
                   ),
                 ],
               ),
@@ -65,14 +69,17 @@ class ConnectionView extends StatelessWidget {
             const SizedBox(height: 6),
             _Swap(
               child: presenter.isConnected
-                  ? Text(
-                      formatDuration(presenter.elapsed),
+                  ? ValueListenableBuilder(
                       key: const ValueKey('timer'),
-                      textAlign: TextAlign.center,
-                      style: AppText.figure(
-                        20,
-                        weight: FontWeight.w600,
-                        color: AppColors.text2,
+                      valueListenable: presenter.elapsed,
+                      builder: (context, elapsed, _) => Text(
+                        formatDuration(elapsed),
+                        textAlign: TextAlign.center,
+                        style: AppText.figure(
+                          20,
+                          weight: FontWeight.w600,
+                          color: AppColors.text2,
+                        ),
                       ),
                     )
                   : Text(

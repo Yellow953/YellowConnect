@@ -27,7 +27,7 @@ class SettingsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([presenter, connection, speedTest]),
+      listenable: Listenable.merge([presenter, connection]),
       builder: (context, _) {
         return AppPage(
           title: 'Settings',
@@ -49,29 +49,34 @@ class SettingsView extends StatelessWidget {
               ],
             ),
             const SectionLabel('Speed test'),
-            DetailList(
-              rows: [
-                DetailRow(
-                  icon: Icons.history_rounded,
-                  label: 'Test history',
-                  caption: switch (speedTest.history.length) {
-                    0 => 'No tests saved',
-                    1 => '1 test saved',
-                    final n => '$n tests saved',
-                  },
-                  trailing: TextButton(
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.red,
-                      minimumSize: const Size(64, 40),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+            // Scoped to its own builder: the speed test presenter notifies on
+            // every progress tick, and only this row reads from it.
+            ListenableBuilder(
+              listenable: speedTest,
+              builder: (context, _) => DetailList(
+                rows: [
+                  DetailRow(
+                    icon: Icons.history_rounded,
+                    label: 'Test history',
+                    caption: switch (speedTest.history.length) {
+                      0 => 'No tests saved',
+                      1 => '1 test saved',
+                      final n => '$n tests saved',
+                    },
+                    trailing: TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.red,
+                        minimumSize: const Size(64, 40),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                      ),
+                      onPressed: speedTest.history.isEmpty
+                          ? null
+                          : () => confirmClearSpeedHistory(context, speedTest),
+                      child: const Text('Clear'),
                     ),
-                    onPressed: speedTest.history.isEmpty
-                        ? null
-                        : () => confirmClearSpeedHistory(context, speedTest),
-                    child: const Text('Clear'),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             const SectionLabel('About'),
             const DetailList(

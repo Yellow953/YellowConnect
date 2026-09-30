@@ -28,8 +28,10 @@ class ConnectionPresenter extends ChangeNotifier {
   /// This device's address inside the tunnel, without the prefix length.
   String? get tunnelIp => _config?.tunnelAddress?.split('/').first;
 
-  Duration _elapsed = Duration.zero;
-  Duration get elapsed => _elapsed;
+  /// Time since connecting. Ticks every second on its own notifier so views
+  /// that only care about [status] don't rebuild with it.
+  final _elapsed = ValueNotifier(Duration.zero);
+  ValueListenable<Duration> get elapsed => _elapsed;
 
   bool get isBusy =>
       _status == ConnectionStatus.connecting ||
@@ -92,10 +94,9 @@ class ConnectionPresenter extends ChangeNotifier {
   void _startTicker() {
     if (_ticker != null) return;
     _connectedSince = DateTime.now();
-    _elapsed = Duration.zero;
+    _elapsed.value = Duration.zero;
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      _elapsed = DateTime.now().difference(_connectedSince!);
-      notifyListeners();
+      _elapsed.value = DateTime.now().difference(_connectedSince!);
     });
   }
 
@@ -103,13 +104,14 @@ class ConnectionPresenter extends ChangeNotifier {
     _ticker?.cancel();
     _ticker = null;
     _connectedSince = null;
-    _elapsed = Duration.zero;
+    _elapsed.value = Duration.zero;
   }
 
   @override
   void dispose() {
     _statusSub?.cancel();
     _ticker?.cancel();
+    _elapsed.dispose();
     super.dispose();
   }
 }

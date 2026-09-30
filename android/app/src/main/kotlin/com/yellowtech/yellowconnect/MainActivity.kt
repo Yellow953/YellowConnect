@@ -29,9 +29,14 @@ class MainActivity : FlutterActivity() {
         launchUri(intent)?.let { channel?.invokeMethod("onUri", it) }
     }
 
-    /** A `yellowconnect://` link from a widget, ignoring relaunches from Recents. */
+    /**
+     * A `yellowconnect://` link from a widget, ignoring relaunches from Recents.
+     * Only accepted through the non-exported [WIDGET_ALIAS], so other apps
+     * can't trigger actions by sending MainActivity an explicit intent.
+     */
     private fun launchUri(intent: Intent?): String? {
         if (intent?.action != Intent.ACTION_VIEW) return null
+        if (intent.component?.className != WIDGET_ALIAS) return null
         if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return null
         return intent.dataString?.takeIf { it.startsWith("$SCHEME://") }
     }
@@ -39,5 +44,6 @@ class MainActivity : FlutterActivity() {
     companion object {
         const val CHANNEL = "yellowconnect/launch_action"
         const val SCHEME = "yellowconnect"
+        const val WIDGET_ALIAS = "com.yellowtech.yellowconnect.WidgetLaunch"
     }
 }

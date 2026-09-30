@@ -1,11 +1,10 @@
 import Flutter
 import UIKit
 
-/// Hands `yellowconnect://` deep links to Dart, whether they come from a URL
-/// or from a widget button (LaunchActionIntent).
-final class LaunchActionPlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDelegate {
-  private static let scheme = "yellowconnect"
-
+/// Hands widget button taps (LaunchActionIntent) to Dart as
+/// `yellowconnect://` links. The scheme is deliberately not registered as a
+/// URL type, so other apps and web pages can't trigger these actions.
+final class LaunchActionPlugin: NSObject, FlutterPlugin {
   private let channel: FlutterMethodChannel
   private var initialUri: String?
   /// Dart has asked for the initial link, so later ones go straight to it.
@@ -22,7 +21,6 @@ final class LaunchActionPlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDe
     )
     let instance = LaunchActionPlugin(channel: channel)
     registrar.addMethodCallDelegate(instance, channel: channel)
-    registrar.addSceneDelegate(instance)
 
     if let pending = LaunchActionInbox.pending {
       instance.initialUri = pending
@@ -48,26 +46,4 @@ final class LaunchActionPlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDe
       initialUri = uri
     }
   }
-
-  // Cold start: the link arrives with the scene's connection options.
-  func scene(
-    _ scene: UIScene,
-    willConnectTo session: UISceneSession,
-    options connectionOptions: UIScene.ConnectionOptions?
-  ) -> Bool {
-    guard let url = connectionOptions?.urlContexts.first?.url, Self.isOurs(url) else {
-      return false
-    }
-    receive(url.absoluteString)
-    return true
-  }
-
-  // Warm start: the app is already running.
-  func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) -> Bool {
-    guard let url = URLContexts.first?.url, Self.isOurs(url) else { return false }
-    receive(url.absoluteString)
-    return true
-  }
-
-  private static func isOurs(_ url: URL) -> Bool { url.scheme == scheme }
 }

@@ -74,14 +74,21 @@ class _AppShellState extends State<AppShell> {
       body: IndexedStack(
         index: _tab.index,
         children: [
-          ConnectionView(presenter: deps.connection),
-          SpeedTestView(presenter: deps.speedTest, network: deps.network),
-          IpCheckerView(presenter: deps.ipChecker, connection: deps.connection),
-          SettingsView(
-            presenter: deps.settings,
-            connection: deps.connection,
-            speedTest: deps.speedTest,
-          ),
+          for (final (i, page) in [
+            ConnectionView(presenter: deps.connection),
+            SpeedTestView(presenter: deps.speedTest, network: deps.network),
+            IpCheckerView(
+              presenter: deps.ipChecker,
+              connection: deps.connection,
+            ),
+            SettingsView(
+              presenter: deps.settings,
+              connection: deps.connection,
+              speedTest: deps.speedTest,
+            ),
+          ].indexed)
+            // IndexedStack keeps hidden pages ticking; pause their animations.
+            TickerMode(enabled: i == _tab.index, child: page),
         ],
       ),
       bottomNavigationBar: GlassNavBar(

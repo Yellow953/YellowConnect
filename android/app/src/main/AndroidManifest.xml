@@ -26,14 +26,15 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Widget deep links. Handled by MainActivity, not Flutter's router. -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="yellowconnect" android:host="widget" />
-            </intent-filter>
             <meta-data android:name="flutter_deeplinking_enabled" android:value="false" />
         </activity>
+        <!-- Entry point for home screen widget taps. Not exported, so only this
+             app's own PendingIntents can reach it; MainActivity ignores widget
+             links that arrive any other way. -->
+        <activity-alias
+            android:name=".WidgetLaunch"
+            android:targetActivity=".MainActivity"
+            android:exported="false" />
         <receiver
             android:name=".QuickActionsWidget"
             android:exported="true"

@@ -36,6 +36,34 @@ The app loads a WireGuard client config from `assets/vpn/wg0.conf`. That file
 holds a private key, so it is gitignored. Copy `assets/vpn/wg0.conf.example`
 to `wg0.conf`, fill in the values from the server, then rebuild.
 
+The config is packed into the APK as a plain asset, so anyone holding the APK
+can read the key. Don't share builds; if one leaks, remove that peer on the
+server and issue a new config.
+
+## Android release signing
+
+Release builds are signed with the key described in `android/key.properties`
+(gitignored, like the keystore itself). Without that file they fall back to
+the debug key, which is fine for `flutter run --release` but must never be
+distributed. To create the key once:
+
+```sh
+keytool -genkey -v -keystore ~/yellowconnect-upload.jks \
+  -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+```
+
+Then create `android/key.properties`:
+
+```properties
+storeFile=/Users/<you>/yellowconnect-upload.jks
+storePassword=<store password>
+keyAlias=upload
+keyPassword=<key password>
+```
+
+Back up the keystore and passwords somewhere safe: losing them means you can't
+publish updates under the same signature.
+
 ## iOS: Packet Tunnel extension
 
 The iOS VPN runs inside the `WGExtension` Network Extension target

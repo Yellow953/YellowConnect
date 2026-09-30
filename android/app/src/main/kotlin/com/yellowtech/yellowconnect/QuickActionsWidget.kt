@@ -3,6 +3,7 @@ package com.yellowtech.yellowconnect
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -22,12 +23,9 @@ class QuickActionsWidget : AppWidgetProvider() {
     }
 
     private fun launch(context: Context, path: String, requestCode: Int): PendingIntent {
-        val intent = Intent(
-            Intent.ACTION_VIEW,
-            Uri.parse("${MainActivity.SCHEME}://widget/$path"),
-            context,
-            MainActivity::class.java,
-        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("${MainActivity.SCHEME}://widget/$path"))
+            .setComponent(ComponentName(context, MainActivity.WIDGET_ALIAS))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         return PendingIntent.getActivity(
             context,
             requestCode,
