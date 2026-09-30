@@ -36,21 +36,19 @@ The app loads a WireGuard client config from `assets/vpn/wg0.conf`. That file
 holds a private key, so it is gitignored. Copy `assets/vpn/wg0.conf.example`
 to `wg0.conf`, fill in the values from the server, then rebuild.
 
-## iOS: Packet Tunnel extension (one-time, in Xcode)
+## iOS: Packet Tunnel extension
 
-The iOS VPN runs inside a Network Extension target that has to be added in
-Xcode.
+The iOS VPN runs inside the `WGExtension` Network Extension target
+(`ios/WGExtension/`, bundle ID `com.yellowtech.yellowconnect.WGExtension`,
+matching `AppConstants.iosTunnelBundleId`). `PacketTunnelProvider` reads the
+`wgQuickConfig` string the plugin passes in `providerConfiguration`, parses it
+with `WgQuickParser`, and starts a `WireGuardAdapter`.
 
-1. Open `ios/Runner.xcworkspace`.
-2. File → New → Target → **Network Extension**. Name it `WGExtension`, set the
-   bundle ID to `com.yellowtech.yellowconnect.WGExtension` (must match
-   `AppConstants.iosTunnelBundleId`), and set the deployment target to iOS 15.
-3. Add the **Network Extensions → Packet Tunnel** capability, plus a shared
-   **App Groups** entry, to both the Runner and WGExtension targets.
-4. Add the `WireGuardKit` Swift package
-   (`https://git.wireguard.com/wireguard-apple`) to the WGExtension target.
-5. Make `PacketTunnelProvider` read `wgQuickConfig` from
-   `protocolConfiguration.providerConfiguration` and start a `WireGuardAdapter`
-   with it.
-
-This needs a paid Apple Developer account to run on a real device.
+- WireGuardKit is vendored in `ios/Packages/WireGuardKit` (see its README for
+  local changes).
+- The target's "Build wireguard-go" phase compiles `libwg-go.a`, so building
+  for iOS needs Go installed: `brew install go`.
+- Runner and WGExtension both carry the Packet Tunnel entitlement. Signing it
+  needs a paid Apple Developer account; pick the team for both targets under
+  Signing & Capabilities in Xcode before running on a device.
+- The tunnel can't actually connect in the Simulator; test on a real iPhone.
